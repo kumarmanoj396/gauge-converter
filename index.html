@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAUGE — Universal Converter Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E1319;
+    --surface:#141B23;
+    --surface-2:#1B2430;
+    --line:#2A3441;
+    --text:#E7EDF3;
+    --muted:#8B98A6;
+    --signal:#7CFFC4;
+    --signal-dim: rgba(124,255,196,0.14);
+    --warn:#FFB84D;
+    --danger:#FF6B6B;
+    --radius: 10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 48px 48px;
+    background-position: -1px -1px;
+    background-attachment: fixed;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background: radial-gradient(ellipse at 20% -10%, rgba(124,255,196,0.06), transparent 55%),
+                radial-gradient(ellipse at 100% 110%, rgba(255,184,77,0.05), transparent 50%);
+    pointer-events:none;
+    z-index:0;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .app{
+    position:relative; z-index:1;
+    display:grid;
+    grid-template-columns: 240px 1fr;
+    min-height:100vh;
+  }
+
+  /* ---------- SIDEBAR / RULER NAV ---------- */
+  .sidebar{
+    border-right:1px solid var(--line);
+    padding:28px 0 28px 0;
+    display:flex; flex-direction:column;
+    background: linear-gradient(180deg, rgba(255,255,255,0.015), transparent 20%);
+  }
+  .brand{
+    padding: 0 24px 26px 28px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:6px;
+  }
+  .brand-mark{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:20px;
+    letter-spacing:2px;
+    color:var(--text);
+    display:flex; align-items:center; gap:8px;
+  }
+  .brand-mark .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--signal);
+    box-shadow:0 0 8px 2px var(--signal-dim);
+  }
+  .brand-sub{
+    font-size:11px; color:var(--muted); margin-top:6px;
+    letter-spacing:0.5px;
+  }
+  .ruler{
+    position:relative;
+    padding-left: 28px;
+    margin-top: 10px;
+  }
+  .ruler::before{
+    content:"";
+    position:absolute;
+    left: 34px; top:4px; bottom:4px;
+    width:1px;
+    background: linear-gradient(var(--line), var(--line));
+  }
+  .tick{
+    position:relative;
+    display:flex; align-items:center; gap:14px;
+    padding: 13px 20px 13px 0;
+    cursor:pointer;
+    user-select:none;
+    border:none; background:none; width:100%; text-align:left;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    letter-spacing:1.2px;
+    color:var(--muted);
+    text-transform:uppercase;
+    transition: color .15s ease;
+  }
+  .tick::before{
+    content:"";
+    width:7px; height:1px;
+    background:var(--line);
+    transition: all .15s ease;
+  }
+  .tick .num{
+    color:var(--line);
+    font-size:11px;
+    width:18px;
+  }
+  .tick:hover{color:var(--text);}
+  .tick:hover::before{background:var(--muted); width:11px;}
+  .tick.active{color:var(--signal);}
+  .tick.active .num{color:var(--signal);}
+  .tick.active::before{
+    background:var(--signal);
+    width:14px;
+    box-shadow:0 0 6px 1px var(--signal-dim);
+  }
+  .tick.active{
+    background: linear-gradient(90deg, var(--signal-dim), transparent 70%);
+  }
+
+  .sidebar-foot{
+    margin-top:auto;
+    padding: 18px 28px 0;
+    border-top:1px solid var(--line);
+    font-size:11px;
+    color:var(--muted);
+    line-height:1.6;
+  }
+  .sidebar-foot .led{
+    display:inline-block; width:6px;height:6px;border-radius:50%;
+    background:var(--signal); margin-right:6px;
+    box-shadow:0 0 6px 1px var(--signal-dim);
+  }
+
+  /* ---------- MAIN ---------- */
+  main{padding: 40px 48px 60px; max-width:980px;}
+  .module-head{margin-bottom:28px;}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px; letter-spacing:2px; color:var(--signal);
+    text-transform:uppercase;
+    display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{content:"◆"; font-size:8px;}
+  h1{
+    font-family:'JetBrains Mono',monospace;
+    font-size:28px; margin:8px 0 6px; font-weight:600; letter-spacing:-0.5px;
+  }
+  .module-desc{color:var(--muted); font-size:14.5px; max-width:60ch; line-height:1.6;}
+
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius: var(--radius);
+    padding:24px;
+    margin-bottom:20px;
+  }
+  .panel-title{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--muted); margin-bottom:16px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;}
+  label{
+    display:block; font-size:11.5px; color:var(--muted);
+    font-family:'JetBrains Mono',monospace; letter-spacing:0.8px;
+    margin-bottom:7px; text-transform:uppercase;
+  }
+  select, input[type="text"], input[type="number"], input[type="datetime-local"], textarea{
+    width:100%;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    padding:11px 12px;
+    border-radius:7px;
+    font-size:14.5px;
+    font-family:'Inter',sans-serif;
+    outline:none;
+    transition:border-color .15s ease;
+  }
+  textarea{font-family:'JetBrains Mono',monospace; font-size:13px; resize:vertical; min-height:110px;}
+  select:focus, input:focus, textarea:focus, button:focus-visible{
+    border-color:var(--signal);
+    box-shadow:0 0 0 3px var(--signal-dim);
+  }
+  select{appearance:none; cursor:pointer;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%238B98A6'/></svg>");
+    background-repeat:no-repeat; background-position:right 12px center;
+    padding-right:30px;
+  }
+  .field{margin-bottom:14px;}
+  .row{display:flex; gap:12px; align-items:flex-end;}
+  .row > *{flex:1;}
+
+  .readout{
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border:1px solid var(--line);
+    border-radius:7px;
+    padding:16px 18px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:22px;
+    color:var(--signal);
+    text-shadow:0 0 12px var(--signal-dim);
+    letter-spacing:0.5px;
+    overflow-wrap:break-word;
+    word-break:break-all;
+  }
+  .readout .unit-label{
+    display:block; font-size:11px; color:var(--muted); text-shadow:none;
+    margin-top:4px; letter-spacing:1px; text-transform:uppercase;
+  }
+
+  button.btn{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px; letter-spacing:1px; text-transform:uppercase;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    padding:11px 18px;
+    border-radius:7px;
+    cursor:pointer;
+    transition: all .15s ease;
+  }
+  button.btn:hover{border-color:var(--signal); color:var(--signal);}
+  button.btn.primary{
+    background:var(--signal); color:#08110D; border-color:var(--signal); font-weight:600;
+  }
+  button.btn.primary:hover{ box-shadow:0 0 16px 1px var(--signal-dim); }
+  button.btn-icon{
+    width:42px;height:42px; padding:0; display:flex; align-items:center; justify-content:center;
+    font-size:16px; flex:none;
+  }
+
+  .dropzone{
+    border:1.5px dashed var(--line);
+    border-radius:8px;
+    padding:30px;
+    text-align:center;
+    color:var(--muted);
+    font-size:13.5px;
+    cursor:pointer;
+    transition: all .15s ease;
+  }
+  .dropzone:hover{border-color:var(--signal); color:var(--signal); background:var(--signal-dim);}
+  .dropzone.drag{border-color:var(--signal); background:var(--signal-dim); color:var(--signal);}
+
+  .thumb-list{display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;}
+  .thumb{
+    width:76px; height:76px; border-radius:6px; overflow:hidden;
+    border:1px solid var(--line); position:relative; background:var(--surface-2);
+  }
+  .thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+
+  .swatch{
+    width:100%; height:120px; border-radius:8px; border:1px solid var(--line);
+    margin-bottom:16px;
+  }
+  .color-value-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px; background:var(--surface-2); border:1px solid var(--line);
+    border-radius:7px; margin-bottom:8px; font-family:'JetBrains Mono',monospace; font-size:13px;
+  }
+  .copy-btn{
+    background:none; border:none; color:var(--muted); cursor:pointer; font-size:12px;
+    font-family:'JetBrains Mono',monospace; letter-spacing:0.5px;
+  }
+  .copy-btn:hover{color:var(--signal);}
+
+  .tabs-inline{display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap;}
+  .tab-chip{
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; letter-spacing:0.8px;
+    padding:8px 14px; border-radius:20px; border:1px solid var(--line);
+    color:var(--muted); cursor:pointer; text-transform:uppercase;
+    background:var(--surface-2);
+  }
+  .tab-chip.active{color:var(--signal); border-color:var(--signal); background:var(--signal-dim);}
+
+  .hidden{display:none !important;}
+  .muted-note{font-size:12px; color:var(--muted); margin-top:10px; line-height:1.6;}
+  .status{font-size:12px; margin-top:10px; font-family:'JetBrains Mono',monospace;}
+  .status.ok{color:var(--signal);}
+  .status.err{color:var(--danger);}
+  a.download-link{
+    color:var(--signal); font-family:'JetBrains Mono',monospace; font-size:13px;
+    text-decoration:none; border-bottom:1px dashed var(--signal); padding-bottom:1px;
+  }
+
+  input[type="range"]{
+    -webkit-appearance:none; width:100%; height:24px; background:transparent;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{
+    height:4px; background:var(--line); border-radius:2px;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; margin-top:-7px;
+    width:16px; height:16px; border-radius:50%;
+    background:var(--signal); border:3px solid #08110D;
+    box-shadow:0 0 6px 1px var(--signal-dim);
+  }
+
+  ::-webkit-scrollbar{width:9px; height:9px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:5px;}
+
+  @media (max-width: 820px){
+    .app{grid-template-columns:1fr;}
+    .sidebar{
+      position:sticky; top:0; z-index:5;
+      flex-direction:row; align-items:center; padding:14px 12px;
+      overflow-x:auto; border-right:none; border-bottom:1px solid var(--line);
+      background:var(--bg);
+    }
+    .brand{border-bottom:none; padding:0 16px 0 6px; margin-bottom:0;}
+    .ruler{padding-left:0; display:flex; margin-top:0;}
+    .ruler::before{display:none;}
+    .tick{padding:8px 12px; white-space:nowrap;}
+    .sidebar-foot{display:none;}
+    main{padding:24px 18px 50px;}
+    .grid2, .grid3{grid-template-columns:1fr;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <nav class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><span class="dot"></span>GAUGE</div>
+      <div class="brand-sub mono">CONVERSION INSTRUMENT PANEL</div>
+    </div>
+    <div class="ruler" id="nav">
+      <button class="tick active" data-mod="units"><span class="num">01</span>Units</button>
+      <button class="tick" data-mod="currency"><span class="num">02</span>Currency</button>
+      <button class="tick" data-mod="image"><span class="num">03</span>Image</button>
+      <button class="tick" data-mod="pdf"><span class="num">04</span>PDF Builder</button>
+      <button class="tick" data-mod="text"><span class="num">05</span>Text &amp; Data</button>
+      <button class="tick" data-mod="color"><span class="num">06</span>Color</button>
+      <button class="tick" data-mod="time"><span class="num">07</span>Time Zone</button>
+    </div>
+    <div class="sidebar-foot mono">
+      <div><span class="led"></span>ALL MODULES ONLINE</div>
+      <div style="margin-top:6px;">Runs client-side.<br>No sign-up, no uploads to us.</div>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ===================== UNITS ===================== -->
+    <section class="mod" id="mod-units">
+      <div class="module-head">
+        <div class="eyebrow">Module 01</div>
+        <h1>Unit Converter</h1>
+        <div class="module-desc">Length, mass, temperature, volume, area, speed, digital storage and duration. Pure client-side math — instant, offline-capable.</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Category</div>
+        <div class="tabs-inline" id="unitCategoryTabs"></div>
+
+        <div class="grid2">
+          <div class="field">
+            <label>From</label>
+            <input type="number" id="unitFromValue" class="mono" value="1" step="any">
+            <div style="height:8px;"></div>
+            <select id="unitFromUnit"></select>
+          </div>
+          <div class="field">
+            <label>To</label>
+            <div class="readout" id="unitResult">—<span class="unit-label" id="unitResultLabel"></span></div>
+            <div style="height:8px;"></div>
+            <select id="unitToUnit"></select>
+          </div>
+        </div>
+        <button class="btn" id="unitSwap" style="margin-top:6px;">⇅ Swap units</button>
+      </div>
+    </section>
+
+    <!-- ===================== CURRENCY ===================== -->
+    <section class="mod hidden" id="mod-currency">
+      <div class="module-head">
+        <div class="eyebrow">Module 02</div>
+        <h1>Currency Converter</h1>
+        <div class="module-desc">Live foreign-exchange rates from the free, key-free Frankfurter API (European Central Bank reference rates, updated daily).</div>
+      </div>
+      <div class="panel">
+        <div class="grid2">
+          <div class="field">
+            <label>Amount / From</label>
+            <input type="number" id="fxAmount" class="mono" value="1" step="any">
+            <div style="height:8px;"></div>
+            <select id="fxFrom"></select>
+          </div>
+          <div class="field">
+            <label>Converted / To</label>
+            <div class="readout" id="fxResult">—<span class="unit-label" id="fxResultLabel"></span></div>
+            <div style="height:8px;"></div>
+            <select id="fxTo"></select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:6px;">
+          <button class="btn" id="fxSwap">⇅ Swap</button>
+          <button class="btn primary" id="fxRefresh">↻ Refresh rates</button>
+        </div>
+        <div class="status" id="fxStatus"></div>
+      </div>
+    </section>
+
+    <!-- ===================== IMAGE ===================== -->
+    <section class="mod hidden" id="mod-image">
+      <div class="module-head">
+        <div class="eyebrow">Module 03</div>
+        <h1>Image Converter</h1>
+        <div class="module-desc">Convert between PNG, JPEG and WebP, resize, and adjust quality — all rendered locally on a canvas. Files never leave your device.</div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Source image</div>
+        <div class="dropzone" id="imgDrop">Click to choose an image, or drag one here</div>
+        <input type="file" id="imgInput" accept="image/*" class="hidden">
+        <div class="thumb-list" id="imgThumb"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Output settings</div>
+        <div class="grid3">
+          <div class="field">
+            <label>Format</label>
+            <select id="imgFormat">
+              <option value="image/png">PNG</option>
+              <option value="image/jpeg">JPEG</option>
+              <option value="image/webp">WebP</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Max width (px, optional)</label>
+            <input type="number" id="imgWidth" placeholder="original">
+          </div>
+          <div class="field">
+            <label>Max height (px, optional)</label>
+            <input type="number" id="imgHeight" placeholder="original">
+          </div>
+        </div>
+        <div class="field" id="imgQualityWrap">
+          <label>Quality — <span id="imgQualityVal">85</span>%</label>
+          <input type="range" id="imgQuality" min="10" max="100" value="85">
+        </div>
+        <button class="btn primary" id="imgConvert">Convert image</button>
+        <div class="status" id="imgStatus"></div>
+        <canvas id="imgCanvas" class="hidden"></canvas>
+      </div>
+    </section>
+
+    <!-- ===================== PDF ===================== -->
+    <section class="mod hidden" id="mod-pdf">
+      <div class="module-head">
+        <div class="eyebrow">Module 04</div>
+        <h1>PDF Builder</h1>
+        <div class="module-desc">Combine one or more images into a single PDF, one image per page, in the order you add them.</div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Images (in page order)</div>
+        <div class="dropzone" id="pdfDrop">Click to choose images, or drag them here</div>
+        <input type="file" id="pdfInput" accept="image/*" multiple class="hidden">
+        <div class="thumb-list" id="pdfThumb"></div>
+      </div>
+      <div class="panel">
+        <div class="grid2">
+          <div class="field">
+            <label>Page size</label>
+            <select id="pdfSize">
+              <option value="a4">A4</option>
+              <option value="letter">Letter</option>
+              <option value="fit">Fit to image</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Orientation</label>
+            <select id="pdfOrientation">
+              <option value="portrait">Portrait</option>
+              <option value="landscape">Landscape</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn primary" id="pdfBuild">Build PDF</button>
+        <button class="btn" id="pdfClear">Clear list</button>
+        <div class="status" id="pdfStatus"></div>
+      </div>
+    </section>
+
+    <!-- ===================== TEXT & DATA ===================== -->
+    <section class="mod hidden" id="mod-text">
+      <div class="module-head">
+        <div class="eyebrow">Module 05</div>
+        <h1>Text &amp; Data Tools</h1>
+        <div class="module-desc">Base64, URL encoding, JSON formatting, cryptographic hashing (via the browser's native WebCrypto API), case conversion, and counting.</div>
+      </div>
+
+      <div class="tabs-inline" id="textTabs">
+        <div class="tab-chip active" data-tab="b64">Base64</div>
+        <div class="tab-chip" data-tab="url">URL Encode</div>
+        <div class="tab-chip" data-tab="json">JSON Format</div>
+        <div class="tab-chip" data-tab="hash">Hash</div>
+        <div class="tab-chip" data-tab="case">Case Convert</div>
+        <div class="tab-chip" data-tab="count">Word Count</div>
+      </div>
+
+      <div class="panel text-pane" id="pane-b64">
+        <div class="panel-title">Base64</div>
+        <div class="field"><label>Input</label><textarea id="b64Input" placeholder="Type or paste text…"></textarea></div>
+        <div class="row" style="margin-bottom:14px;">
+          <button class="btn primary" id="b64Encode">Encode →</button>
+          <button class="btn" id="b64Decode">← Decode</button>
+        </div>
+        <div class="field"><label>Output</label><textarea id="b64Output" readonly></textarea></div>
+      </div>
+
+      <div class="panel text-pane hidden" id="pane-url">
+        <div class="panel-title">URL Encode / Decode</div>
+        <div class="field"><label>Input</label><textarea id="urlInput" placeholder="https://example.com/?q=hello world"></textarea></div>
+        <div class="row" style="margin-bottom:14px;">
+          <button class="btn primary" id="urlEncode">Encode →</button>
+          <button class="btn" id="urlDecode">← Decode</button>
+        </div>
+        <div class="field"><label>Output</label><textarea id="urlOutput" readonly></textarea></div>
+      </div>
+
+      <div class="panel text-pane hidden" id="pane-json">
+        <div class="panel-title">JSON Formatter &amp; Validator</div>
+        <div class="field"><label>Input</label><textarea id="jsonInput" placeholder='{"hello":"world"}'></textarea></div>
+        <div class="row" style="margin-bottom:14px;">
+          <button class="btn primary" id="jsonFormat">Format &amp; validate</button>
+          <button class="btn" id="jsonMinify">Minify</button>
+        </div>
+        <div class="field"><label>Output</label><textarea id="jsonOutput" readonly></textarea></div>
+        <div class="status" id="jsonStatus"></div>
+      </div>
+
+      <div class="panel text-pane hidden" id="pane-hash">
+        <div class="panel-title">Hash Generator</div>
+        <div class="field"><label>Input text</label><textarea id="hashInput" placeholder="Type text to hash…"></textarea></div>
+        <div class="field">
+          <label>Algorithm</label>
+          <select id="hashAlgo">
+            <option value="SHA-1">SHA-1</option>
+            <option value="SHA-256" selected>SHA-256</option>
+            <option value="SHA-384">SHA-384</option>
+            <option value="SHA-512">SHA-512</option>
+          </select>
+        </div>
+        <button class="btn primary" id="hashGo">Generate hash</button>
+        <div class="readout" id="hashOutput" style="margin-top:14px; font-size:14px;">—</div>
+      </div>
+
+      <div class="panel text-pane hidden" id="pane-case">
+        <div class="panel-title">Case Converter</div>
+        <div class="field"><label>Input</label><textarea id="caseInput" placeholder="Type or paste text…"></textarea></div>
+        <div class="tabs-inline">
+          <div class="tab-chip" data-case="upper">UPPER</div>
+          <div class="tab-chip" data-case="lower">lower</div>
+          <div class="tab-chip" data-case="title">Title Case</div>
+          <div class="tab-chip" data-case="sentence">Sentence case</div>
+          <div class="tab-chip" data-case="camel">camelCase</div>
+          <div class="tab-chip" data-case="snake">snake_case</div>
+          <div class="tab-chip" data-case="kebab">kebab-case</div>
+        </div>
+        <div class="field"><label>Output</label><textarea id="caseOutput" readonly></textarea></div>
+      </div>
+
+      <div class="panel text-pane hidden" id="pane-count">
+        <div class="panel-title">Word &amp; Character Count</div>
+        <div class="field"><label>Input</label><textarea id="countInput" placeholder="Paste text to analyze…" style="min-height:160px;"></textarea></div>
+        <div class="grid3">
+          <div class="readout" id="countWords" style="font-size:16px;">0<span class="unit-label">Words</span></div>
+          <div class="readout" id="countChars" style="font-size:16px;">0<span class="unit-label">Characters</span></div>
+          <div class="readout" id="countLines" style="font-size:16px;">0<span class="unit-label">Lines</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== COLOR ===================== -->
+    <section class="mod hidden" id="mod-color">
+      <div class="module-head">
+        <div class="eyebrow">Module 06</div>
+        <h1>Color Converter</h1>
+        <div class="module-desc">Convert between HEX, RGB, HSL and CMYK with a live swatch preview.</div>
+      </div>
+      <div class="panel">
+        <div class="swatch" id="colorSwatch" style="background:#7CFFC4;"></div>
+        <div class="grid2">
+          <div class="field">
+            <label>Hex</label>
+            <input type="text" id="colorHex" class="mono" value="#7CFFC4">
+          </div>
+          <div class="field">
+            <label>Native picker</label>
+            <input type="color" id="colorPicker" value="#7CFFC4" style="height:44px; padding:4px; cursor:pointer;">
+          </div>
+        </div>
+        <div class="color-value-row"><span id="rgbOut">rgb(124, 255, 196)</span><button class="copy-btn" data-copy="rgbOut">COPY</button></div>
+        <div class="color-value-row"><span id="hslOut">hsl(156, 100%, 74%)</span><button class="copy-btn" data-copy="hslOut">COPY</button></div>
+        <div class="color-value-row"><span id="cmykOut">cmyk(51%, 0%, 23%, 0%)</span><button class="copy-btn" data-copy="cmykOut">COPY</button></div>
+        <button class="btn" id="colorRandom" style="margin-top:6px;">🎲 Random color</button>
+      </div>
+    </section>
+
+    <!-- ===================== TIME ZONE ===================== -->
+    <section class="mod hidden" id="mod-time">
+      <div class="module-head">
+        <div class="eyebrow">Module 07</div>
+        <h1>Time Zone Converter</h1>
+        <div class="module-desc">Convert a date and time between any two IANA time zones using your browser's built-in Intl engine — no network call required.</div>
+      </div>
+      <div class="panel">
+        <div class="field">
+          <label>Date &amp; time</label>
+          <input type="datetime-local" id="tzDateTime">
+          <button class="btn" id="tzNow" style="margin-top:8px;">Use current time</button>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>From time zone</label>
+            <select id="tzFrom"></select>
+          </div>
+          <div class="field">
+            <label>To time zone</label>
+            <select id="tzTo"></select>
+          </div>
+        </div>
+        <div class="readout" id="tzResult">—<span class="unit-label" id="tzResultLabel"></span></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* ======================= NAVIGATION ======================= */
+const ticks = document.querySelectorAll('.tick');
+ticks.forEach(t=>{
+  t.addEventListener('click', ()=>{
+    ticks.forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelectorAll('.mod').forEach(m=>m.classList.add('hidden'));
+    document.getElementById('mod-'+t.dataset.mod).classList.remove('hidden');
+  });
+});
+
+/* ======================= UNIT CONVERTER ======================= */
+const unitCategories = {
+  length: { base:'meter', units:{
+    meter:1, kilometer:1000, centimeter:0.01, millimeter:0.001,
+    mile:1609.34, yard:0.9144, foot:0.3048, inch:0.0254, nauticalMile:1852
+  }},
+  mass: { base:'gram', units:{
+    gram:1, kilogram:1000, milligram:0.001, tonne:1000000,
+    pound:453.592, ounce:28.3495, stone:6350.29
+  }},
+  temperature: { base:'celsius', units:{ celsius:1, fahrenheit:1, kelvin:1 } },
+  volume: { base:'liter', units:{
+    liter:1, milliliter:0.001, cubicMeter:1000,
+    gallon:3.78541, quart:0.946353, pint:0.473176, cup:0.24, fluidOunce:0.0295735
+  }},
+  area: { base:'sqmeter', units:{
+    sqmeter:1, sqkilometer:1e6, sqmile:2.59e6, sqyard:0.836127,
+    sqfoot:0.092903, sqinch:0.00064516, acre:4046.86, hectare:10000
+  }},
+  speed: { base:'mps', units:{
+    mps:1, kmh:0.277778, mph:0.44704, knot:0.514444, fts:0.3048
+  }},
+  digital: { base:'byte', units:{
+    bit:0.125, byte:1, kilobyte:1024, megabyte:1048576, gigabyte:1073741824, terabyte:1099511627776
+  }},
+  time: { base:'second', units:{
+    second:1, minute:60, hour:3600, day:86400, week:604800, month:2629800, year:31557600
+  }}
+};
+
+function toCelsius(v,u){ if(u==='celsius')return v; if(u==='fahrenheit')return (v-32)*5/9; if(u==='kelvin')return v-273.15; }
+function fromCelsius(v,u){ if(u==='celsius')return v; if(u==='fahrenheit')return v*9/5+32; if(u==='kelvin')return v+273.15; }
+
+const catTabsEl = document.getElementById('unitCategoryTabs');
+let currentCat = 'length';
+Object.keys(unitCategories).forEach(cat=>{
+  const chip = document.createElement('div');
+  chip.className = 'tab-chip' + (cat===currentCat?' active':'');
+  chip.textContent = cat;
+  chip.dataset.cat = cat;
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('#unitCategoryTabs .tab-chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    currentCat = cat;
+    populateUnitSelects();
+    runUnitConvert();
+  });
+  catTabsEl.appendChild(chip);
+});
+
+const unitFromSel = document.getElementById('unitFromUnit');
+const unitToSel = document.getElementById('unitToUnit');
+
+function populateUnitSelects(){
+  const units = Object.keys(unitCategories[currentCat].units);
+  unitFromSel.innerHTML = units.map(u=>`<option value="${u}">${labelize(u)}</option>`).join('');
+  unitToSel.innerHTML = units.map(u=>`<option value="${u}">${labelize(u)}</option>`).join('');
+  unitFromSel.selectedIndex = 0;
+  unitToSel.selectedIndex = units.length>1?1:0;
+}
+function labelize(u){
+  return u.replace(/([A-Z])/g,' $1').replace(/^./,c=>c.toUpperCase());
+}
+function runUnitConvert(){
+  const val = parseFloat(document.getElementById('unitFromValue').value);
+  const fromU = unitFromSel.value, toU = unitToSel.value;
+  const out = document.getElementById('unitResult');
+  const outLabel = document.getElementById('unitResultLabel');
+  if(isNaN(val)){ out.firstChild.textContent = '—'; return; }
+  let result;
+  if(currentCat === 'temperature'){
+    result = fromCelsius(toCelsius(val, fromU), toU);
+  } else {
+    const units = unitCategories[currentCat].units;
+    result = val * units[fromU] / units[toU];
+  }
+  const rounded = Math.abs(result) < 0.0001 && result !== 0 ? result.toExponential(4) : trimNum(result);
+  out.firstChild.textContent = rounded;
+  outLabel.textContent = labelize(toU);
+}
+function trimNum(n){
+  return parseFloat(n.toFixed(6)).toString();
+}
+['unitFromValue'].forEach(id=>document.getElementById(id).addEventListener('input', runUnitConvert));
+unitFromSel.addEventListener('change', runUnitConvert);
+unitToSel.addEventListener('change', runUnitConvert);
+document.getElementById('unitSwap').addEventListener('click', ()=>{
+  const f = unitFromSel.value, t = unitToSel.value;
+  unitFromSel.value = t; unitToSel.value = f;
+  runUnitConvert();
+});
+populateUnitSelects();
+runUnitConvert();
+
+/* ======================= CURRENCY (Frankfurter API) ======================= */
+const commonCurrencies = ['USD','EUR','GBP','INR','JPY','AUD','CAD','CHF','CNY','SGD','AED','ZAR','BRL','MXN','NZD'];
+const fxFromSel = document.getElementById('fxFrom');
+const fxToSel = document.getElementById('fxTo');
+fxFromSel.innerHTML = commonCurrencies.map(c=>`<option ${c==='USD'?'selected':''}>${c}</option>`).join('');
+fxToSel.innerHTML = commonCurrencies.map(c=>`<option ${c==='EUR'?'selected':''}>${c}</option>`).join('');
+
+async function loadCurrencyList(){
+  try{
+    const res = await fetch('https://api.frankfurter.app/currencies');
+    const data = await res.json();
+    const codes = Object.keys(data);
+    if(codes.length){
+      fxFromSel.innerHTML = codes.map(c=>`<option ${c==='USD'?'selected':''}>${c} — ${data[c]}</option>`).join('');
+      fxToSel.innerHTML = codes.map(c=>`<option ${c==='EUR'?'selected':''}>${c} — ${data[c]}</option>`).join('');
+    }
+  }catch(e){ /* keep fallback list */ }
+}
+function fxCode(sel){ return sel.value.split(' ')[0]; }
+
+async function runFxConvert(){
+  const amount = parseFloat(document.getElementById('fxAmount').value) || 0;
+  const from = fxCode(fxFromSel), to = fxCode(fxToSel);
+  const status = document.getElementById('fxStatus');
+  const resultEl = document.getElementById('fxResult');
+  const labelEl = document.getElementById('fxResultLabel');
+  if(from === to){
+    resultEl.firstChild.textContent = trimNum(amount);
+    labelEl.textContent = to;
+    status.textContent = '';
+    return;
+  }
+  status.textContent = 'Fetching live rate…';
+  status.className = 'status';
+  try{
+    const res = await fetch(`https://api.frankfurter.app/latest?amount=${amount}&from=${from}&to=${to}`);
+    if(!res.ok) throw new Error('Request failed');
+    const data = await res.json();
+    const val = data.rates[to];
+    resultEl.firstChild.textContent = trimNum(val);
+    labelEl.textContent = to;
+    status.textContent = `Rate date: ${data.date} · 1 ${from} = ${trimNum(data.rates[to]/amount || 0)} ${to}`;
+    status.className = 'status ok';
+  }catch(e){
+    status.textContent = 'Could not reach the exchange-rate API. Check your connection and try again.';
+    status.className = 'status err';
+  }
+}
+document.getElementById('fxAmount').addEventListener('input', runFxConvert);
+fxFromSel.addEventListener('change', runFxConvert);
+fxToSel.addEventListener('change', runFxConvert);
+document.getElementById('fxRefresh').addEventListener('click', runFxConvert);
+document.getElementById('fxSwap').addEventListener('click', ()=>{
+  const f = fxFromSel.value; fxFromSel.value = fxToSel.value; fxToSel.value = f;
+  runFxConvert();
+});
+loadCurrencyList().then(runFxConvert);
+
+/* ======================= IMAGE CONVERTER ======================= */
+const imgInput = document.getElementById('imgInput');
+const imgDrop = document.getElementById('imgDrop');
+const imgThumb = document.getElementById('imgThumb');
+const imgQuality = document.getElementById('imgQuality');
+const imgQualityVal = document.getElementById('imgQualityVal');
+const imgFormat = document.getElementById('imgFormat');
+let loadedImage = null;
+
+imgDrop.addEventListener('click', ()=>imgInput.click());
+imgDrop.addEventListener('dragover', e=>{e.preventDefault(); imgDrop.classList.add('drag');});
+imgDrop.addEventListener('dragleave', ()=>imgDrop.classList.remove('drag'));
+imgDrop.addEventListener('drop', e=>{
+  e.preventDefault(); imgDrop.classList.remove('drag');
+  if(e.dataTransfer.files.length) handleImageFile(e.dataTransfer.files[0]);
+});
+imgInput.addEventListener('change', ()=>{ if(imgInput.files.length) handleImageFile(imgInput.files[0]); });
+
+function handleImageFile(file){
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const img = new Image();
+    img.onload = ()=>{
+      loadedImage = img;
+      imgThumb.innerHTML = `<div class="thumb"><img src="${e.target.result}"></div>`;
+      document.getElementById('imgWidth').placeholder = img.width;
+      document.getElementById('imgHeight').placeholder = img.height;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+imgQuality.addEventListener('input', ()=>imgQualityVal.textContent = imgQuality.value);
+imgFormat.addEventListener('change', ()=>{
+  document.getElementById('imgQualityWrap').style.display = imgFormat.value === 'image/png' ? 'none' : 'block';
+});
+
+document.getElementById('imgConvert').addEventListener('click', ()=>{
+  const status = document.getElementById('imgStatus');
+  if(!loadedImage){ status.textContent = 'Choose an image first.'; status.className='status err'; return; }
+  const canvas = document.getElementById('imgCanvas');
+  let w = parseInt(document.getElementById('imgWidth').value) || loadedImage.width;
+  let h = parseInt(document.getElementById('imgHeight').value) || loadedImage.height;
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,w,h);
+  ctx.drawImage(loadedImage, 0, 0, w, h);
+  const format = imgFormat.value;
+  const quality = parseInt(imgQuality.value)/100;
+  canvas.toBlob(blob=>{
+    if(!blob){ status.textContent='Conversion failed in this browser.'; status.className='status err'; return; }
+    const url = URL.createObjectURL(blob);
+    const ext = format.split('/')[1];
+    status.innerHTML = `Done — <a class="download-link" href="${url}" download="converted.${ext}">Download converted.${ext}</a> (${Math.round(blob.size/1024)} KB)`;
+    status.className = 'status ok';
+  }, format, quality);
+});
+
+/* ======================= PDF BUILDER ======================= */
+const pdfInput = document.getElementById('pdfInput');
+const pdfDrop = document.getElementById('pdfDrop');
+const pdfThumb = document.getElementById('pdfThumb');
+let pdfImages = [];
+
+pdfDrop.addEventListener('click', ()=>pdfInput.click());
+pdfDrop.addEventListener('dragover', e=>{e.preventDefault(); pdfDrop.classList.add('drag');});
+pdfDrop.addEventListener('dragleave', ()=>pdfDrop.classList.remove('drag'));
+pdfDrop.addEventListener('drop', e=>{
+  e.preventDefault(); pdfDrop.classList.remove('drag');
+  addPdfFiles(e.dataTransfer.files);
+});
+pdfInput.addEventListener('change', ()=>addPdfFiles(pdfInput.files));
+
+function addPdfFiles(fileList){
+  Array.from(fileList).forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      pdfImages.push(e.target.result);
+      renderPdfThumbs();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function renderPdfThumbs(){
+  pdfThumb.innerHTML = pdfImages.map((src,i)=>`<div class="thumb"><img src="${src}"></div>`).join('');
+}
+document.getElementById('pdfClear').addEventListener('click', ()=>{ pdfImages=[]; renderPdfThumbs(); });
+
+document.getElementById('pdfBuild').addEventListener('click', ()=>{
+  const status = document.getElementById('pdfStatus');
+  if(!pdfImages.length){ status.textContent='Add at least one image first.'; status.className='status err'; return; }
+  if(typeof window.jspdf === 'undefined'){ status.textContent='PDF library failed to load — check your connection.'; status.className='status err'; return; }
+  const { jsPDF } = window.jspdf;
+  const sizeChoice = document.getElementById('pdfSize').value;
+  const orientation = document.getElementById('pdfOrientation').value;
+  let doc;
+  let first = true;
+  let pending = pdfImages.length;
+  const results = new Array(pdfImages.length);
+
+  pdfImages.forEach((src, idx)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      results[idx] = img;
+      pending--;
+      if(pending === 0) assemble();
+    };
+    img.src = src;
+  });
+
+  function assemble(){
+    results.forEach((img, i)=>{
+      const format = sizeChoice === 'fit' ? [img.width, img.height] : sizeChoice;
+      if(first){
+        doc = new jsPDF({ orientation, unit:'px', format: sizeChoice==='fit' ? format : sizeChoice });
+        first = false;
+      } else {
+        doc.addPage(sizeChoice==='fit' ? format : sizeChoice, orientation);
+      }
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const scale = Math.min(pageW/img.width, pageH/img.height);
+      const w = img.width*scale, h = img.height*scale;
+      const x = (pageW-w)/2, y = (pageH-h)/2;
+      doc.addImage(img, 'JPEG', x, y, w, h);
+    });
+    const blobUrl = doc.output('bloburl');
+    status.innerHTML = `Done — <a class="download-link" href="${blobUrl}" download="converted.pdf">Download converted.pdf</a>`;
+    status.className = 'status ok';
+  }
+});
+
+/* ======================= TEXT & DATA TOOLS ======================= */
+document.querySelectorAll('#textTabs .tab-chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('#textTabs .tab-chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    document.querySelectorAll('.text-pane').forEach(p=>p.classList.add('hidden'));
+    document.getElementById('pane-'+chip.dataset.tab).classList.remove('hidden');
+  });
+});
+
+document.getElementById('b64Encode').addEventListener('click', ()=>{
+  try{ document.getElementById('b64Output').value = btoa(unescape(encodeURIComponent(document.getElementById('b64Input').value))); }
+  catch(e){ document.getElementById('b64Output').value = 'Error: could not encode.'; }
+});
+document.getElementById('b64Decode').addEventListener('click', ()=>{
+  try{ document.getElementById('b64Output').value = decodeURIComponent(escape(atob(document.getElementById('b64Input').value))); }
+  catch(e){ document.getElementById('b64Output').value = 'Error: input is not valid Base64.'; }
+});
+
+document.getElementById('urlEncode').addEventListener('click', ()=>{
+  document.getElementById('urlOutput').value = encodeURIComponent(document.getElementById('urlInput').value);
+});
+document.getElementById('urlDecode').addEventListener('click', ()=>{
+  try{ document.getElementById('urlOutput').value = decodeURIComponent(document.getElementById('urlInput').value); }
+  catch(e){ document.getElementById('urlOutput').value = 'Error: could not decode.'; }
+});
+
+document.getElementById('jsonFormat').addEventListener('click', ()=>{
+  const status = document.getElementById('jsonStatus');
+  try{
+    const parsed = JSON.parse(document.getElementById('jsonInput').value);
+    document.getElementById('jsonOutput').value = JSON.stringify(parsed, null, 2);
+    status.textContent = 'Valid JSON.'; status.className = 'status ok';
+  }catch(e){
+    status.textContent = 'Invalid JSON: ' + e.message; status.className = 'status err';
+    document.getElementById('jsonOutput').value = '';
+  }
+});
+document.getElementById('jsonMinify').addEventListener('click', ()=>{
+  const status = document.getElementById('jsonStatus');
+  try{
+    const parsed = JSON.parse(document.getElementById('jsonInput').value);
+    document.getElementById('jsonOutput').value = JSON.stringify(parsed);
+    status.textContent = 'Valid JSON.'; status.className = 'status ok';
+  }catch(e){
+    status.textContent = 'Invalid JSON: ' + e.message; status.className = 'status err';
+  }
+});
+
+document.getElementById('hashGo').addEventListener('click', async ()=>{
+  const text = document.getElementById('hashInput').value;
+  const algo = document.getElementById('hashAlgo').value;
+  const enc = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest(algo, enc);
+  const hex = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  document.getElementById('hashOutput').textContent = hex;
+});
+
+function toTitleCase(s){ return s.replace(/\w\S*/g, t=>t[0].toUpperCase()+t.slice(1).toLowerCase()); }
+function toCamelCase(s){ return s.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m,c)=>c.toUpperCase()); }
+function toSnakeCase(s){ return s.trim().toLowerCase().replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_|_$/g,''); }
+function toKebabCase(s){ return s.trim().toLowerCase().replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,''); }
+document.querySelectorAll('[data-case]').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    const input = document.getElementById('caseInput').value;
+    let out = input;
+    switch(chip.dataset.case){
+      case 'upper': out = input.toUpperCase(); break;
+      case 'lower': out = input.toLowerCase(); break;
+      case 'title': out = toTitleCase(input); break;
+      case 'sentence': out = input.toLowerCase().replace(/(^\s*\w|[.!?]\s*\w)/g, c=>c.toUpperCase()); break;
+      case 'camel': out = toCamelCase(input); break;
+      case 'snake': out = toSnakeCase(input); break;
+      case 'kebab': out = toKebabCase(input); break;
+    }
+    document.getElementById('caseOutput').value = out;
+  });
+});
+
+document.getElementById('countInput').addEventListener('input', e=>{
+  const val = e.target.value;
+  const words = val.trim() ? val.trim().split(/\s+/).length : 0;
+  const chars = val.length;
+  const lines = val ? val.split(/\n/).length : 0;
+  document.getElementById('countWords').firstChild.textContent = words;
+  document.getElementById('countChars').firstChild.textContent = chars;
+  document.getElementById('countLines').firstChild.textContent = lines;
+});
+
+/* ======================= COLOR CONVERTER ======================= */
+const colorHex = document.getElementById('colorHex');
+const colorPicker = document.getElementById('colorPicker');
+const colorSwatch = document.getElementById('colorSwatch');
+
+function hexToRgb(hex){
+  hex = hex.replace('#','');
+  if(hex.length===3) hex = hex.split('').map(c=>c+c).join('');
+  const num = parseInt(hex,16);
+  return { r:(num>>16)&255, g:(num>>8)&255, b:num&255 };
+}
+function rgbToHsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h,s,l=(max+min)/2;
+  if(max===min){ h=s=0; }
+  else{
+    const d = max-min;
+    s = l>0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){
+      case r: h=(g-b)/d+(g<b?6:0); break;
+      case g: h=(b-r)/d+2; break;
+      case b: h=(r-g)/d+4; break;
+    }
+    h/=6;
+  }
+  return { h:Math.round(h*360), s:Math.round(s*100), l:Math.round(l*100) };
+}
+function rgbToCmyk(r,g,b){
+  if(r===0&&g===0&&b===0) return {c:0,m:0,y:0,k:100};
+  const rp=r/255, gp=g/255, bp=b/255;
+  const k = 1-Math.max(rp,gp,bp);
+  const c = (1-rp-k)/(1-k);
+  const m = (1-gp-k)/(1-k);
+  const y = (1-bp-k)/(1-k);
+  return { c:Math.round(c*100), m:Math.round(m*100), y:Math.round(y*100), k:Math.round(k*100) };
+}
+function updateColorFromHex(hex){
+  if(!/^#?[0-9A-Fa-f]{3}$|^#?[0-9A-Fa-f]{6}$/.test(hex)) return;
+  if(!hex.startsWith('#')) hex = '#'+hex;
+  const { r,g,b } = hexToRgb(hex);
+  const hsl = rgbToHsl(r,g,b);
+  const cmyk = rgbToCmyk(r,g,b);
+  colorSwatch.style.background = hex;
+  colorPicker.value = hex.length===4 ? hexToFull(hex) : hex;
+  document.getElementById('rgbOut').textContent = `rgb(${r}, ${g}, ${b})`;
+  document.getElementById('hslOut').textContent = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+  document.getElementById('cmykOut').textContent = `cmyk(${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%)`;
+}
+function hexToFull(hex){
+  const { r,g,b } = hexToRgb(hex);
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+colorHex.addEventListener('input', ()=>updateColorFromHex(colorHex.value));
+colorPicker.addEventListener('input', ()=>{ colorHex.value = colorPicker.value; updateColorFromHex(colorPicker.value); });
+document.getElementById('colorRandom').addEventListener('click', ()=>{
+  const rand = '#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
+  colorHex.value = rand;
+  updateColorFromHex(rand);
+});
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const text = document.getElementById(btn.dataset.copy).textContent;
+    navigator.clipboard.writeText(text).then(()=>{
+      const old = btn.textContent; btn.textContent = 'COPIED';
+      setTimeout(()=>btn.textContent = old, 1200);
+    });
+  });
+});
+updateColorFromHex('#7CFFC4');
+
+/* ======================= TIME ZONE CONVERTER ======================= */
+const tzFromSel = document.getElementById('tzFrom');
+const tzToSel = document.getElementById('tzTo');
+let zones = ['UTC','America/New_York','America/Los_Angeles','America/Chicago','America/Sao_Paulo',
+  'Europe/London','Europe/Paris','Europe/Berlin','Europe/Moscow','Africa/Cairo','Africa/Johannesburg',
+  'Asia/Dubai','Asia/Kolkata','Asia/Shanghai','Asia/Tokyo','Asia/Singapore','Asia/Seoul',
+  'Australia/Sydney','Pacific/Auckland'];
+try{
+  if(typeof Intl.supportedValuesOf === 'function'){
+    zones = Intl.supportedValuesOf('timeZone');
+  }
+}catch(e){}
+tzFromSel.innerHTML = zones.map(z=>`<option ${z==='Asia/Kolkata'?'selected':''}>${z}</option>`).join('');
+tzToSel.innerHTML = zones.map(z=>`<option ${z==='UTC'?'selected':''}>${z}</option>`).join('');
+
+function runTzConvert(){
+  const dtVal = document.getElementById('tzDateTime').value;
+  if(!dtVal) return;
+  const fromZone = tzFromSel.value, toZone = tzToSel.value;
+  const [datePart, timePart] = dtVal.split('T');
+  const [y,m,d] = datePart.split('-').map(Number);
+  const [hh,mm] = timePart.split(':').map(Number);
+
+  const asUTCGuess = Date.UTC(y, m-1, d, hh, mm);
+  const tzOffsetMinutes = getTzOffsetMinutes(fromZone, asUTCGuess);
+  const trueUTC = asUTCGuess - tzOffsetMinutes*60000;
+
+  const formatted = new Intl.DateTimeFormat('en-GB', {
+    timeZone: toZone, year:'numeric', month:'short', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', hour12:false
+  }).format(new Date(trueUTC));
+
+  document.getElementById('tzResult').firstChild.textContent = formatted;
+  document.getElementById('tzResultLabel').textContent = toZone;
+}
+function getTzOffsetMinutes(timeZone, utcMillis){
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone, year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+  });
+  const parts = dtf.formatToParts(new Date(utcMillis));
+  const map = {};
+  parts.forEach(p=>map[p.type]=p.value);
+  const asUTC = Date.UTC(map.year, map.month-1, map.day, map.hour==='24'?0:map.hour, map.minute, map.second);
+  return (asUTC - utcMillis)/60000;
+}
+document.getElementById('tzNow').addEventListener('click', ()=>{
+  const now = new Date();
+  const pad = n=>String(n).padStart(2,'0');
+  document.getElementById('tzDateTime').value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  runTzConvert();
+});
+document.getElementById('tzDateTime').addEventListener('input', runTzConvert);
+tzFromSel.addEventListener('change', runTzConvert);
+tzToSel.addEventListener('change', runTzConvert);
+document.getElementById('tzNow').click();
+</script>
+</body>
+</html>
