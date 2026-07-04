@@ -3,7 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GAUGE — Universal Converter Toolkit</title>
+<title>GAUGE — Free Unit, Currency, Image, PDF &amp; Text Converter</title>
+<meta name="description" content="A free all-in-one converter toolkit: units, currency, images, PDF, text/data tools, color and time zones. Runs entirely in your browser — no sign-up, no uploads.">
+<meta name="theme-color" content="#0E1319">
+
+<!-- Open Graph / social preview -->
+<meta property="og:title" content="GAUGE — Free Unit, Currency, Image, PDF & Text Converter">
+<meta property="og:description" content="Convert units, currency, images, PDFs, text and colors — all free, all client-side.">
+<meta property="og:type" content="website">
+
+<!-- Favicon (inline SVG, no external file needed) -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%230E1319' stroke='%232A3441' stroke-width='3'/%3E%3Ccircle cx='50' cy='50' r='6' fill='%237CFFC4'/%3E%3Cline x1='50' y1='50' x2='72' y2='30' stroke='%237CFFC4' stroke-width='4' stroke-linecap='round'/%3E%3Cline x1='50' y1='12' x2='50' y2='20' stroke='%238B98A6' stroke-width='3'/%3E%3Cline x1='50' y1='80' x2='50' y2='88' stroke='%238B98A6' stroke-width='3'/%3E%3Cline x1='12' y1='50' x2='20' y2='50' stroke='%238B98A6' stroke-width='3'/%3E%3Cline x1='80' y1='50' x2='88' y2='50' stroke='%238B98A6' stroke-width='3'/%3E%3C/svg%3E">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -763,7 +774,7 @@ fxToSel.innerHTML = commonCurrencies.map(c=>`<option ${c==='EUR'?'selected':''}>
 
 async function loadCurrencyList(){
   try{
-    const res = await fetch('https://api.frankfurter.app/currencies');
+    const res = await fetch('https://api.frankfurter.dev/v1/currencies');
     const data = await res.json();
     const codes = Object.keys(data);
     if(codes.length){
@@ -789,7 +800,7 @@ async function runFxConvert(){
   status.textContent = 'Fetching live rate…';
   status.className = 'status';
   try{
-    const res = await fetch(`https://api.frankfurter.app/latest?amount=${amount}&from=${from}&to=${to}`);
+    const res = await fetch(`https://api.frankfurter.dev/v1/latest?amount=${amount}&from=${from}&to=${to}`);
     if(!res.ok) throw new Error('Request failed');
     const data = await res.json();
     const val = data.rates[to];
